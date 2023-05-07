@@ -6,7 +6,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 SemaphoreTuple = namedtuple('Semaphore', ['Semaphore', 'Nodes'])
-
+dropMessagesWhenQIsFull = False
 
 class Network:
     nodes: Node
@@ -97,17 +97,17 @@ class Network:
     # Show the graph
     plt.show()
 
-node1 = Node("127.0.0.1",60345,[60347,60346],8)
-node2 = Node("127.0.0.1",60348,[60347,60346],8)
-node3 = Node("127.0.0.1",60347,[60345,60348,60349,60350],8)
-node4 = Node("127.0.0.1",60346,[60345,60348,60351,60352],8)
-node5 = Node("127.0.0.1",60349,[60347,60350],8)
-node6 = Node("127.0.0.1",60350,[60347,60349],8)
-node7 = Node("127.0.0.1",60351,[60346],8)
-node8 = Node("127.0.0.1",60352,[60346],8)
+node1 = Node("127.0.0.1",60345,[60347,60346],1)
+node2 = Node("127.0.0.1",60348,[60347,60346],1)
+node3 = Node("127.0.0.1",60347,[60345,60348,60349,60350],1)
+node4 = Node("127.0.0.1",60346,[60345,60348,60351,60352],1)
+node5 = Node("127.0.0.1",60349,[60347,60350],1)
+node6 = Node("127.0.0.1",60350,[60347,60349],1)
+node7 = Node("127.0.0.1",60351,[60346],1)
+node8 = Node("127.0.0.1",60352,[60346],1)
 network = Network([node1,node2,node3,node4,node5,node6,node7,node8])
 network.StartThreadingOnAll()
-network.initSemaphores(4)
+network.initSemaphores(50)
 print("semaphoressss:  "+ str(network.semaphores))
 
 

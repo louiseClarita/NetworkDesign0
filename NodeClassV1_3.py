@@ -79,18 +79,25 @@ class NodeClass:
           print(f"Listeningfrom2....{self.ports}", flush=True)
           message = socket.recv()
           data = eval(message.decode())
-          print("this is the messagee receved:: "+ str(data),flush=True)
+          print("this is the messagee received:: "+ str(data),flush=True)
+
           socket.send_string("received " + str(self.ports))
-          print("this is the messagee i want to put on Q:: " + str(data[0]) +" "+str(data[1]), flush=True)
-          self.messageRCVD[data[1]] = data[0]
-          self.messageQueue.put(data)
-          print(f"I'm {self.ports} I Received request: {message.decode()}\n", flush=True)
-          #self.zmqBroadCast(message.decode(), self.currentSendingNode)
-          #self.currentSendingNode = None
-          #socket.close()
 
-          #break
 
+          # this if statement check if the dropMessagesWhenQIsFull = True to drop the msgs
+          if NetworkConfig.dropMessagesWhenQIsFull:
+
+              # this if statement check if the Q is full so we drop the packet
+                if not self.messageQueue.full():
+                    print("this is the messagee i want to put on Q:: " + str(data[0]) +" "+str(data[1]), flush=True)
+                    self.messageRCVD[data[1]] = data[0]
+                    self.messageQueue.put(data)
+                    print(f"I'm {self.ports} I Received request: {message.decode()}\n", flush=True)
+          else:
+              print("this is the messagee i want to put on Q:: " + str(data[0]) + " " + str(data[1]), flush=True)
+              self.messageRCVD[data[1]] = data[0]
+              self.messageQueue.put(data)
+              print(f"I'm {self.ports} I Received request: {message.decode()}\n", flush=True)
   def sendMessages(self):
       while True:
           [message,broadcastNbr] = self.messageQueue.get()
@@ -201,17 +208,17 @@ class NodeClass:
 
   def zmqRCV(self, port):
     message = self.sending_socket.recv()
-    for neighborPort in self.neighbors:
-
-        for semaphore in NetworkConfig.network.semaphores:
-            if semaphore.Nodes == [self.ports, neighborPort] or semaphore.Nodes == [neighborPort,
-                                                                                    self.ports]:
-                print('we catch the semaphore that we want to unlock:')
-                print(str(semaphore))
-                semaphore.Semaphore.release()
-                print('Semaphore unlocked')
-                print('remaining value after the release: ' + str(semaphore.Semaphore._value))
-    print(message)
+    # for neighborPort in self.neighbors:
+    #
+    #     for semaphore in NetworkConfig.network.semaphores:
+    #         if semaphore.Nodes == [self.ports, neighborPort] or semaphore.Nodes == [neighborPort,
+    #                                                                                 self.ports]:
+    #             print('we catch the semaphore that we want to unlock:')
+    #             print(str(semaphore))
+    #             semaphore.Semaphore.release()
+    #             print('Semaphore unlocked')
+    #             print('remaining value after the release: ' + str(semaphore.Semaphore._value))
+    # print(message)
 
 
   def ToString(self):
