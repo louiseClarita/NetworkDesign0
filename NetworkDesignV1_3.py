@@ -6,9 +6,9 @@ def CheckConsensus(message):
 
     for i,node in enumerate(NetworkConfig.network.nodes):
         node.broadcastMessage(f"Broadcast{i+1}",node.ports,i+1)
-        time.sleep(1)
 
-    time.sleep(10)
+
+    time.sleep(4)
 
 
     print("Pre-prepare Phase:", flush=True)
@@ -20,16 +20,16 @@ def CheckConsensus(message):
 
     for node in NetworkConfig.network.nodes:
         node.checkMessagesBroadcast()
-        time.sleep(1)
+
 
 
     for i, node in enumerate(NetworkConfig.network.nodes):
         if node.isValidBroadcast:
-            node.broadcastMessage(f"Prepare{i + 1}", node.ports, i + 9)
+            node.broadcastMessage(f"Prepare{i + 1}", node.ports, i + 1 + 8)
 
-    # dd
 
-    time.sleep(30)
+
+    time.sleep(4)
 
 
     print("Prepare Phase:", flush=True)
@@ -45,14 +45,14 @@ def CheckConsensus(message):
 
     for node in NetworkConfig.network.nodes:
         node.checkMessagesPrepare()
-        time.sleep(1)
+
 
     for i,node in enumerate(NetworkConfig.network.nodes):
             if node.isValidPrepare:
-                node.broadcastMessage(f"Commit{i+1}",node.ports,i+17)
+                node.broadcastMessage(f"Commit{i+1}", node.ports, i + 1 + 2 * 8)
 
 
-    time.sleep(30)
+    time.sleep(4)
 
     print("Commit Phase:", flush=True)
 
@@ -63,7 +63,12 @@ def CheckConsensus(message):
     message
     print("]", flush=True)
 
-    print("The Drop rate is:"+str(NetworkConfig.BitsOfMessagesDropped),flush=True )
+    print("The Number Of Messages Dropped in bits is: " + str(NetworkConfig.BitsNumberOfMessagesDropped), flush=True)
+    print("The Number Of Messages in bits is: "+str(NetworkConfig.TotalBitsNumberOfMessages),flush=True )
+
+    print("The Number Of Messages Dropped is: " + str(NetworkConfig.NumberOfMessagesDropped), flush=True)
+    print("The Number Of Messages  is: " + str(NetworkConfig.TotalNumberOfMessages), flush=True)
+
 
     print("Storage:", flush=True)
 

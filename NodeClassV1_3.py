@@ -71,12 +71,13 @@ class NodeClass:
 
   def zmqRead2(self):
 
-      # print("Listening1")
+
       context = zmq.Context()
       socket = context.socket(zmq.REP)
-      # print("Listening2")
+
       socket.bind("tcp://*:" + str(self.ports))
       while True:
+
           #  Wait for next request from client
           print(f"Listeningfrom2....{self.ports}", flush=True)
           message = socket.recv()
@@ -84,35 +85,48 @@ class NodeClass:
           print("this is the messagee received:: "+ str(data),flush=True)
 
           socket.send_string("received " + str(self.ports))
+          if not (data[1] in self.messageRCVD.keys()):
 
+            NetworkConfig.TotalBitsNumberOfMessages = NetworkConfig.TotalBitsNumberOfMessages + len(data[0])
+            NetworkConfig.TotalNumberOfMessages = NetworkConfig.TotalNumberOfMessages + 1
 
-          # this if statement check if the dropMessagesWhenQIsFull = True to drop the msgs
-          if NetworkConfig.dropMessagesWhenQIsFull:
+            for semaphore in NetworkConfig.network.semaphores:
+                    # if semaphore.Nodes == [self.ports, neighborPort] or semaphore.Nodes == [neighborPort,self.ports]:
+                    if id(semaphore) == data[3]:
+                        print('we catch the semaphore that we want to unlock:')
+                        print(str(semaphore))
+                        semaphore.Semaphore.release()
+                        print('remaining value after the release: ' + str(semaphore.Semaphore._value))
 
-              # this if statement check if the Q is full so we drop the packet
-                if not self.messageQueue.full():
-                    print("this is the messagee i want to put on Q:: " + str(data[0]) + " " + str(data[1]), flush=True)
-                    self.messageRCVD[data[1]] = data[0]
-                    self.messageQueue.put(data)
-                    self.nodeStorageList.append(data)
-                    print(f"I'm {self.ports} I Received request: {message.decode()}\n", flush=True)
-                else:
-                    NetworkConfig.BitsOfMessagesDropped = NetworkConfig.BitsOfMessagesDropped + 1
-          else:
-              print("this is the messagee i want to put on Q:: " + str(data[0]) + " " + str(data[1]), flush=True)
-              self.messageRCVD[data[1]] = data[0]
-              self.messageQueue.put(data)
-              self.nodeStorageList.append(data[1])
-              print(f"I'm {self.ports} I Received request: {message.decode()}\n", flush=True)
+            # this if statement check if the dropMessagesWhenQIsFull = True to drop the msgs
+            if NetworkConfig.dropMessagesWhenQIsFull:
+
+                # this if statement check if the Q is full so we drop the packet
+                    if not self.messageQueue.full():
+                        print("this is the messagee i want to put on Q:: " + str(data[0]) + " " + str(data[1]), flush=True)
+                        self.messageRCVD[data[1]] = data[0]
+                        self.messageQueue.put(data)
+                        self.nodeStorageList.append(data)
+                        print(f"I'm {self.ports} I Received request: {message.decode()}\n", flush=True)
+                    else:
+                        NetworkConfig.NumberOfMessagesDropped = NetworkConfig.NumberOfMessagesDropped + 1
+                        NetworkConfig.BitsNumberOfMessagesDropped = NetworkConfig.BitsNumberOfMessagesDropped + len(data[0])
+            else:
+                print("this is the messagee i want to put on Q:: " + str(data[0]) + " " + str(data[1]), flush=True)
+                self.messageRCVD[data[1]] = data[0]
+                self.messageQueue.put(data)
+                self.nodeStorageList.append(data)
+                #self.nodeStorageList.append(threading.current_thread())
+                print(f"I'm {self.ports} I Received request: {message.decode()}\n", flush=True)
   def sendMessages(self):
       while True:
-          [message,broadcastNbr] = self.messageQueue.get()
-          self.zmqBroadCast(message, self.currentSendingNode,broadcastNbr)
+          [message,broadcastNbr,currentSendingNode1,sem_id] = self.messageQueue.get()
+          self.zmqBroadCast(message, currentSendingNode1,broadcastNbr)
           #self.currentSendingNode = None
 
   def broadcastMessage(self,message,currentSendingNode,broadcastNbr):
           self.currentSendingNode = currentSendingNode
-          self.messageQueue.put([message,broadcastNbr])
+          self.messageQueue.put([message,broadcastNbr,currentSendingNode,0])
 
 
   def zmqReadrunning(self):
@@ -123,6 +137,9 @@ class NodeClass:
           #  Wait for next request from client
           print(f"Listeningfrom2....{self.ports}", flush=True)
           message = socket.recv()
+
+
+
           socket.send_string("received " + str(self.ports))
           self.messageRCVD[message.decode()] = message.decode()
           print(f"I'm {self.ports} I Received request: {message.decode()}\n", flush=True)
@@ -162,7 +179,7 @@ class NodeClass:
                     print("2neighbor:::"+ str(neighbor)+" != " +str(currentSendingNode1) +" annd" + str(currentSendingNode1) +" nott in" + str(NeighboringNode0.broadcastNbr[broadcastNbr-1][0]), flush=True)
 
                     NeighboringNode = NetworkConfig.Network.getNodeByPort(NetworkConfig.network, node=neighbor)
-#dd
+
                     if NeighboringNode == -1:
                         print("node was not found")
                         exit(1)
@@ -173,26 +190,26 @@ class NodeClass:
                     print("neighbor :" + str(neighbor) + "is not in this list :" + str(
                         self.broadcastNbr[broadcastNbr - 1][0])+ "so i will add it !")
                     NeighboringNode.broadcastNbr[broadcastNbr-1][0].append(self.ports)
-
+                    sem_id = 0
                     #self.mutexReadWriteInputNodes.release()
-                    for neighborPort in self.neighbors:
+                    # for neighborPort in self.neighbors:
 
-                        for semaphore in NetworkConfig.network.semaphores:
-                            if semaphore.Nodes == [self.ports, neighborPort] or semaphore.Nodes == [neighborPort,
+                    for semaphore in NetworkConfig.network.semaphores:
+                            if semaphore.Nodes == [self.ports, neighbor] or semaphore.Nodes == [neighbor,
                                                                                                     self.ports]:
                                 print('we catch the semaphore that we want to lock:')
                                 print(str(semaphore))
                                 semaphore.Semaphore.acquire()
                                 print('Semaphore locked')
                                 print('remaining value is: '+ str(semaphore.Semaphore._value))
-
+                                sem_id = id(semaphore)
 
 
 
                     self.sending_socket = context.socket(zmq.REQ)
                     self.sending_socket.connect("tcp://localhost:" + str(neighbor))
                     print(" I am " + str(self.ports) + "currentSendingNode : " + str(
-                        self.currentSendingNode) + ",/n currentsendingNode1 : " + str(currentSendingNode1))
+                        currentSendingNode1) + ",/n currentsendingNode1 : " + str(currentSendingNode1))
                     print("broadcast from" + str(self.ports) + " ->" + str(neighbor), flush=True)
                     # NeighboringNode = NetworkConfig.Network.getNodeByPort(NetworkConfig.network,node=neighbor)
                     #
@@ -204,7 +221,7 @@ class NodeClass:
                     # NeighboringNode.broadcastNbr[broadcastNbr-1][0].append(self.ports)
                     #json_string = json.dumps(data)
                     #self.sending_socket.send_string(json_string)
-                    message = [data, broadcastNbr]
+                    message = [data, broadcastNbr,self.ports, sem_id]
                     self.sending_socket.send_string(str(message))
 
                     # socket.send(bytes(data))
@@ -248,6 +265,7 @@ class NodeClass:
 
 
   def ToString(self):
+    self.messageRCVD = dict(sorted(self.messageRCVD.items()))
     print("Node: {port: " + str(self.ports) + ", Neighbors: " + str(self.neighbors) + ", CurrentData: " + str(
         self.messageRCVD) + "}", flush=True)
 
@@ -282,7 +300,7 @@ class NodeClass:
   def checkMessagesPrepare(self):
       prepareMsgNumber = 0
       for msg in self.messageRCVD:
-          print(msg)
+          print(str(self.messageRCVD[msg]))
           if "Prepare" in self.messageRCVD[msg]:
               print(f"{msg} is in prepare")
               prepareMsgNumber += 1

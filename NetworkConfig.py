@@ -7,9 +7,12 @@ import matplotlib.pyplot as plt
 #dd
 SemaphoreTuple = namedtuple('Semaphore', ['Semaphore', 'Nodes'])
 dropMessagesWhenQIsFull = False
-maxQueueCapacity = 4
-semaphoreMaxValue = 100
-BitsOfMessagesDropped = 0
+maxQueueCapacity = 2
+semaphoreMaxValue = 8
+BitsNumberOfMessagesDropped = 0
+NumberOfMessagesDropped = 0
+TotalNumberOfMessages = 0
+TotalBitsNumberOfMessages = 0
 class Network:
     nodes: Node
     semaphores = [SemaphoreTuple]
