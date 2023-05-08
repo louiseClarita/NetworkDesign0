@@ -26,6 +26,8 @@ class NodeClass:
     self.isValidBroadcast = False
     self.isValidPrepare = False
     self.maxQueueCapacity = maxQueueCapacity
+    self.nodeStorageList = []
+    self.mutexReadWriteInputNodes = threading.Lock
 
 
 
@@ -61,7 +63,7 @@ class NodeClass:
              self.messageRCVD[message.decode()] = message.decode()
              print(f"Received request: {message.decode()}\n", flush=True)
              self.zmqBroadCast(message.decode(),self.currentSendingNode)
-             self.currentSendingNode = None
+             #self.currentSendingNode = None
              #socket.close()
 
              break
@@ -89,20 +91,24 @@ class NodeClass:
 
               # this if statement check if the Q is full so we drop the packet
                 if not self.messageQueue.full():
-                    print("this is the messagee i want to put on Q:: " + str(data[0]) +" "+str(data[1]), flush=True)
+                    print("this is the messagee i want to put on Q:: " + str(data[0]) + " " + str(data[1]), flush=True)
                     self.messageRCVD[data[1]] = data[0]
                     self.messageQueue.put(data)
+                    self.nodeStorageList.append(data)
                     print(f"I'm {self.ports} I Received request: {message.decode()}\n", flush=True)
+                else:
+                    NetworkConfig.BitsOfMessagesDropped = NetworkConfig.BitsOfMessagesDropped + 1
           else:
               print("this is the messagee i want to put on Q:: " + str(data[0]) + " " + str(data[1]), flush=True)
               self.messageRCVD[data[1]] = data[0]
               self.messageQueue.put(data)
+              self.nodeStorageList.append(data[1])
               print(f"I'm {self.ports} I Received request: {message.decode()}\n", flush=True)
   def sendMessages(self):
       while True:
           [message,broadcastNbr] = self.messageQueue.get()
           self.zmqBroadCast(message, self.currentSendingNode,broadcastNbr)
-          self.currentSendingNode = None
+          #self.currentSendingNode = None
 
   def broadcastMessage(self,message,currentSendingNode,broadcastNbr):
           self.currentSendingNode = currentSendingNode
@@ -138,17 +144,37 @@ class NodeClass:
         for neighbor in self.neighbors:
             print("je suis là\n")
             print("neighbor :" + str(neighbor) + " in input nodes list :" + str(self.broadcastNbr[broadcastNbr-1][0]))
-
+            NeighboringNode0 = NetworkConfig.Network.getNodeByPort(NetworkConfig.network, node=neighbor)
             if neighbor in self.broadcastNbr[broadcastNbr-1][0]:
                 print(
                     "\nThis is the sender we will not send it back1 and the neighbor i am attempting to reach out to is" + str(
                         neighbor), flush=True)
+
+
+
             elif neighbor not in self.broadcastNbr[broadcastNbr-1][0]:
-                if neighbor != currentSendingNode1:
+                print("1neighbor:::" + str(neighbor) + " notequal" + str(
+                    currentSendingNode1) + " annd" + str(currentSendingNode1) + " nott in" +
+                   str(NeighboringNode0.broadcastNbr[broadcastNbr - 1][0]), flush=True)
 
+                if neighbor != currentSendingNode1 and currentSendingNode1 not in NeighboringNode0.broadcastNbr[broadcastNbr-1][0] and str(data) not in NeighboringNode0.messageRCVD.values():
 
+                    print("2neighbor:::"+ str(neighbor)+" != " +str(currentSendingNode1) +" annd" + str(currentSendingNode1) +" nott in" + str(NeighboringNode0.broadcastNbr[broadcastNbr-1][0]), flush=True)
 
+                    NeighboringNode = NetworkConfig.Network.getNodeByPort(NetworkConfig.network, node=neighbor)
+#dd
+                    if NeighboringNode == -1:
+                        print("node was not found")
+                        exit(1)
 
+                    NeighboringNode.currentSendingNode = self.ports
+
+                    #self.mutexReadWriteInputNodes.acquire()
+                    print("neighbor :" + str(neighbor) + "is not in this list :" + str(
+                        self.broadcastNbr[broadcastNbr - 1][0])+ "so i will add it !")
+                    NeighboringNode.broadcastNbr[broadcastNbr-1][0].append(self.ports)
+
+                    #self.mutexReadWriteInputNodes.release()
                     for neighborPort in self.neighbors:
 
                         for semaphore in NetworkConfig.network.semaphores:
@@ -168,14 +194,14 @@ class NodeClass:
                     print(" I am " + str(self.ports) + "currentSendingNode : " + str(
                         self.currentSendingNode) + ",/n currentsendingNode1 : " + str(currentSendingNode1))
                     print("broadcast from" + str(self.ports) + " ->" + str(neighbor), flush=True)
-                    NeighboringNode = NetworkConfig.Network.getNodeByPort(NetworkConfig.network,node=neighbor)
-
-                    if NeighboringNode == -1:
-                        print("node was not found")
-                        exit(1)
-
-                    NeighboringNode.currentSendingNode = self.ports
-                    NeighboringNode.broadcastNbr[broadcastNbr-1][0].append(self.ports)
+                    # NeighboringNode = NetworkConfig.Network.getNodeByPort(NetworkConfig.network,node=neighbor)
+                    #
+                    # if NeighboringNode == -1:
+                    #     print("node was not found")
+                    #     exit(1)
+                    #
+                    # NeighboringNode.currentSendingNode = self.ports
+                    # NeighboringNode.broadcastNbr[broadcastNbr-1][0].append(self.ports)
                     #json_string = json.dumps(data)
                     #self.sending_socket.send_string(json_string)
                     message = [data, broadcastNbr]
@@ -225,6 +251,13 @@ class NodeClass:
     print("Node: {port: " + str(self.ports) + ", Neighbors: " + str(self.neighbors) + ", CurrentData: " + str(
         self.messageRCVD) + "}", flush=True)
 
+  def ListToString(self):
+    print("Node: {port: " + str(self.ports) + ", Neighbors: " + str(self.neighbors) + ", CurrentData: " + str(
+        self.nodeStorageList) + "}", flush=True)
+
+  def ListToString2(self):
+      print("Node: {port: " + str(self.ports) + ", Neighbors: " + str(self.neighbors) + ", CurrentData: " + str(
+          self.broadcastNbr) + "}", flush=True)
 
   def checkMessageBroadcast(self):
     return True

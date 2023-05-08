@@ -4,10 +4,12 @@ from NodeClassV1_3 import NodeClass as Node
 from collections import namedtuple
 import networkx as nx
 import matplotlib.pyplot as plt
-
+#dd
 SemaphoreTuple = namedtuple('Semaphore', ['Semaphore', 'Nodes'])
 dropMessagesWhenQIsFull = False
-
+maxQueueCapacity = 4
+semaphoreMaxValue = 100
+BitsOfMessagesDropped = 0
 class Network:
     nodes: Node
     semaphores = [SemaphoreTuple]
@@ -97,18 +99,19 @@ class Network:
     # Show the graph
     plt.show()
 
-node1 = Node("127.0.0.1",60345,[60347,60346],1)
-node2 = Node("127.0.0.1",60348,[60347,60346],1)
-node3 = Node("127.0.0.1",60347,[60345,60348,60349,60350],1)
-node4 = Node("127.0.0.1",60346,[60345,60348,60351,60352],1)
-node5 = Node("127.0.0.1",60349,[60347,60350],1)
-node6 = Node("127.0.0.1",60350,[60347,60349],1)
-node7 = Node("127.0.0.1",60351,[60346],1)
-node8 = Node("127.0.0.1",60352,[60346],1)
+
+node1 = Node("127.0.0.1",60345,[60347, 60346], maxQueueCapacity)
+node2 = Node("127.0.0.1",60348,[60347, 60346],maxQueueCapacity)
+node3 = Node("127.0.0.1",60347,[60345, 60348, 60349, 60350], maxQueueCapacity)
+node4 = Node("127.0.0.1",60346,[60345,60348,60351,60352], maxQueueCapacity)
+node5 = Node("127.0.0.1",60349,[60347,60350], maxQueueCapacity)
+node6 = Node("127.0.0.1",60350,[60347,60349], maxQueueCapacity)
+node7 = Node("127.0.0.1",60351,[60346], maxQueueCapacity)
+node8 = Node("127.0.0.1",60352,[60346], maxQueueCapacity)
 network = Network([node1,node2,node3,node4,node5,node6,node7,node8])
 network.StartThreadingOnAll()
-network.initSemaphores(50)
-print("semaphoressss:  "+ str(network.semaphores))
+network.initSemaphores(semaphoreMaxValue)
+#print("semaphoressss:  "+ str(network.semaphores))
 
 
 
