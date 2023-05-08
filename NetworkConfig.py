@@ -1,14 +1,15 @@
 import threading
 from threading import Semaphore
-from NodeClassV1_3 import NodeClass as Node
+from NodeClassV1_4 import NodeClass as Node
 from collections import namedtuple
 import networkx as nx
 import matplotlib.pyplot as plt
 #dd
+
 SemaphoreTuple = namedtuple('Semaphore', ['Semaphore', 'Nodes'])
 dropMessagesWhenQIsFull = False
-maxQueueCapacity = 2
-semaphoreMaxValue = 8
+maxQueueCapacity = 300
+semaphoreMaxValue = 800
 BitsNumberOfMessagesDropped = 0
 NumberOfMessagesDropped = 0
 TotalNumberOfMessages = 0

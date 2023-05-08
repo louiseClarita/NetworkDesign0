@@ -107,7 +107,15 @@ class NodeClass:
                 # this if statement check if the Q is full so we drop the packet
                     if not self.messageQueue.full():
                         print("this is the messagee i want to put on Q:: " + str(data[0]) + " " + str(data[1]), flush=True)
-                        self.messageRCVD[data[1]] = data[0]
+                        if str(data[0]) == "Broadcast":
+                            self.messageRCVD[data[1]] = data[0]
+                            self.messagesBroadcastReceived[data[1]] = data[0]
+                        elif str(data[0]) == "Prepare":
+                            self.messageRCVD[data[1]] = data[0]
+                            self.messagesPrepareReceived[data[1]] = data[0]
+                        elif str(data[0]) == "Commit":
+                            self.messageRCVD[data[1]] = data[0]
+                            self.messagesCommitReceived[data[1]] = data[0]
                         self.messageQueue.put(data)
                         self.nodeStorageList.append(data)
                         print(f"I'm {self.ports} I Received request: {message.decode()}\n", flush=True)
@@ -240,11 +248,19 @@ class NodeClass:
     print(message)
 
 
-  def ToString(self):
+  def ToStringBroadcast(self):
     self.messageRCVD = dict(sorted(self.messageRCVD.items()))
     print("Node: {port: " + str(self.ports) + ", Neighbors: " + str(self.neighbors) + ", CurrentData: " + str(
-        self.messageRCVD) + "}", flush=True)
+        self.messagesBroadcastReceived) + "}", flush=True)
 
+  def ToStringPrepare(self):
+      self.messageRCVD = dict(sorted(self.messageRCVD.items()))
+      print("Node: {port: " + str(self.ports) + ", Neighbors: " + str(self.neighbors) + ", CurrentData: " + str(
+          self.messagesPrepareReceived) + "}", flush=True)
+  def ToStringCommit(self):
+      self.messageRCVD = dict(sorted(self.messageRCVD.items()))
+      print("Node: {port: " + str(self.ports) + ", Neighbors: " + str(self.neighbors) + ", CurrentData: " + str(
+          self.messagesCommitReceived) + "}", flush=True)
   def ListToString(self):
     print("Node: {port: " + str(self.ports) + ", Neighbors: " + str(self.neighbors) + ", CurrentData: " + str(
         self.nodeStorageList) + "}", flush=True)
@@ -257,7 +273,7 @@ class NodeClass:
     return True
 
 
-  def checkMessagesBroadcast(self):
+  def checkMessagesBroadcast1(self):
       broadcastMsgNumber = 0
       for msg in self.messageRCVD:
           print(self.messageRCVD[msg])
@@ -274,8 +290,53 @@ class NodeClass:
           self.messageRCVD.clear()
           self.isValidBroadcast = False
 
+  def checkMessagesBroadcast(self):
+      while len(self.messagesBroadcastReceived) >= 7:
+
+          if (len(self.messagesBroadcastReceived) >= 7):
+            broadcastMsgNumber = 0
+            for nbr in list(self.messagesBroadcastReceived):
+                print(self.messagesBroadcastReceived[nbr])
+                if "Broadcast" in self.messagesBroadcastReceived[nbr]:
+                    print(f"{self.messagesBroadcastReceived[nbr]} contains Broadcast")
+                    broadcastMsgNumber += 1
+
+            if (broadcastMsgNumber>2):
+                #self.messagesBroadcastReceived = self.messageRCVD
+                #self.messageRCVD.clear()
+                self.broadcastMessage("Prepare", self.ports, nbr + 8)
+                self.isValidBroadcast = True
+            else:
+                #self.messagesBroadcastReceived = self.messageRCVD
+                #self.messageRCVD.clear()
+                self.isValidBroadcast = False
+            break
 
   def checkMessagesPrepare(self):
+      while len(self.messagesPrepareReceived) >= 5:
+          #self.messagesPrepareReceived = self.messageRCVD
+          #print("listtttt1" + str(self.messagesPrepareReceived))
+          if (len(self.messagesPrepareReceived) >= 5):
+            prepareMsgNumber = 0
+            for nbr in list(self.messagesPrepareReceived):
+                print(self.messagesPrepareReceived[nbr])
+                if "Prepare" in self.messagesPrepareReceived[nbr]:
+                    print(f"{self.messagesPrepareReceived[nbr]} is in Prepare")
+                    prepareMsgNumber += 1
+            print("listtttt"+str(self.messagesPrepareReceived))
+            if (prepareMsgNumber > 2):
+                #self.messagesPrepareReceived = self.messageRCVD
+                #self.messageRCVD.clear()
+                self.broadcastMessage(f"Commit{nbr}", self.ports, nbr + 8)
+                self.isValidPrepare = True
+            else:
+                #self.messagesPrepareReceived = self.messageRCVD
+                #self.messageRCVD.clear()
+                self.isValidPrepare = False
+
+            break
+
+  def checkMessagesPrepare1(self):
       prepareMsgNumber = 0
       for msg in self.messageRCVD:
           print(str(self.messageRCVD[msg]))
@@ -292,3 +353,5 @@ class NodeClass:
           self.messagesPrepareReceived = self.messageRCVD
           self.messageRCVD.clear()
           self.isValidPrepare = False
+
+
