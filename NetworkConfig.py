@@ -1,11 +1,11 @@
 import threading
 from threading import Semaphore
-from NodeClassV1_4 import NodeClass as Node
+from NodeClassV1_5 import NodeClass as Node
 from collections import namedtuple
 import networkx as nx
 import matplotlib.pyplot as plt
 #dd
-
+num_nodes = 8
 SemaphoreTuple = namedtuple('Semaphore', ['Semaphore', 'Nodes'])
 dropMessagesWhenQIsFull = False
 maxQueueCapacity = 300
@@ -60,10 +60,10 @@ class Network:
         for node in self.nodes:
             for neighborPort in node.neighbors:
                 if any(semaphore.Nodes == [node.ports, neighborPort] or semaphore.Nodes == [neighborPort,node.ports] for semaphore in self.semaphores):
-                    print('The ports are already in the semaphores list!')
+                    nothing =0
                 else:
                     Network.semaphores.append(SemaphoreTuple(Semaphore(semaphoreValue), [node.ports, neighborPort]))
-                    print('Semaphore added!! :) ')
+
 
   # Define the nodes and edges of the network
     nodes = [1, 2, 3, 4, 5, 6, 7, 8]
@@ -115,7 +115,7 @@ node8 = Node("127.0.0.1",60352,[60346], maxQueueCapacity)
 network = Network([node1,node2,node3,node4,node5,node6,node7,node8])
 network.StartThreadingOnAll()
 network.initSemaphores(semaphoreMaxValue)
-#print("semaphoressss:  "+ str(network.semaphores))
+
 
 
 
