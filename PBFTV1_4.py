@@ -11,24 +11,27 @@ def CheckConsensus(message):
         node.broadcastMessage("Broadcast",node.ports,i+1)
 
 
-    for node in NetworkConfig.network.nodes:
+    for i,node in enumerate(NetworkConfig.network.nodes):
         print("thread turned on in broad", flush=True)
-        thread = threading.Thread(target=node.checkMessagesBroadcast, args=())
+        # Create a new thread object
+        stop_event = False  # This event will be used to signal the thread to stop
+        thread = threading.Thread(target=node.checkMessagesBroadcast, args=(stop_event,i+1,))
         thread.daemon = True
         threads.append(thread)
         thread.start()
         print("thread started in broad", flush=True)
 
-    for node in NetworkConfig.network.nodes:
+    for i,node in enumerate(NetworkConfig.network.nodes):
         print("thread turned on", flush=True)
-        thread = threading.Thread(target=node.checkMessagesPrepare, args=())
+        stop_event = False  # This event will be used to signal the thread to stop
+        thread = threading.Thread(target=node.checkMessagesPrepare, args=(stop_event,i+1,))
         thread.daemon = True
         threadsPrepare.append(thread)
         thread.start()
 
 
 
-    time.sleep(60)
+    time.sleep(90)
     print("Pre-prepare Phase:", flush=True)
 
     print("nodes : [", flush=True)
@@ -76,6 +79,15 @@ def CheckConsensus(message):
     print("nodes : [", flush=True)
     for node in NetworkConfig.network.nodes:
         node.ListToString2()
+
+    message
+    print("]", flush=True)
+
+    print("RCVD:", flush=True)
+
+    print("nodes : [", flush=True)
+    for node in NetworkConfig.network.nodes:
+        node.ListToString()
 
     message
     print("]", flush=True)

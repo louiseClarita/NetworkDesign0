@@ -42,6 +42,7 @@ class NodeClass:
     self.sendThread = threading.Thread(target=self.sendMessages)
     self.sendThread.daemon = True
     self.sendThread.start()
+
     self.broadcastNbr = [[[],0] for _ in range(8*3)]
 # [[63237,],[],[],[]]
 
@@ -124,6 +125,15 @@ class NodeClass:
                         NetworkConfig.BitsNumberOfMessagesDropped = NetworkConfig.BitsNumberOfMessagesDropped + len(data[0])
             else:
                 print("this is the messagee i want to put on Q:: " + str(data[0]) + " " + str(data[1]), flush=True)
+                if str(data[0]) == "Broadcast":
+                    self.messageRCVD[data[1]] = data[0]
+                    self.messagesBroadcastReceived[data[1]] = data[0]
+                elif str(data[0]) == "Prepare":
+                    self.messageRCVD[data[1]] = data[0]
+                    self.messagesPrepareReceived[data[1]] = data[0]
+                elif str(data[0]) == "Commit":
+                    self.messageRCVD[data[1]] = data[0]
+                    self.messagesCommitReceived[data[1]] = data[0]
                 self.messageRCVD[data[1]] = data[0]
                 self.messageQueue.put(data)
                 self.nodeStorageList.append(data)
@@ -132,11 +142,13 @@ class NodeClass:
   def sendMessages(self):
       while True:
           [message,broadcastNbr,currentSendingNode1,sem_id] = self.messageQueue.get()
+          print(f"this is the msg in sendmessages : {message, currentSendingNode1,broadcastNbr}\n", flush=True)
           self.zmqBroadCast(message, currentSendingNode1,broadcastNbr)
           #self.currentSendingNode = None
 
-  def broadcastMessage(self,message,currentSendingNode,broadcastNbr):
-          self.currentSendingNode = currentSendingNode
+  def broadcastMessage(self,message,currentSendingNode, broadcastNbr):
+          #self.currentSendingNode = currentSendingNode
+          print(f"this is the msg in broadcastMessage : {message, currentSendingNode, broadcastNbr}\n", flush=True)
           self.messageQueue.put([message,broadcastNbr,currentSendingNode,0])
 
 
@@ -182,7 +194,7 @@ class NodeClass:
 
             elif neighbor not in self.broadcastNbr[broadcastNbr-1][0]:
 
-                if neighbor != currentSendingNode1 and currentSendingNode1 not in NeighboringNode0.broadcastNbr[broadcastNbr-1][0] and str(data) not in NeighboringNode0.messageRCVD.values():
+                if neighbor != currentSendingNode1 and currentSendingNode1 not in NeighboringNode0.broadcastNbr[broadcastNbr-1][0] :
 
                     print("2neighbor:::"+ str(neighbor)+" != " +str(currentSendingNode1) +" annd" + str(currentSendingNode1) +" nott in" + str(NeighboringNode0.broadcastNbr[broadcastNbr-1][0]), flush=True)
 
@@ -249,16 +261,16 @@ class NodeClass:
 
 
   def ToStringBroadcast(self):
-    self.messageRCVD = dict(sorted(self.messageRCVD.items()))
+    self.messagesBroadcastReceived = dict(sorted(self.messagesBroadcastReceived.items()))
     print("Node: {port: " + str(self.ports) + ", Neighbors: " + str(self.neighbors) + ", CurrentData: " + str(
         self.messagesBroadcastReceived) + "}", flush=True)
 
   def ToStringPrepare(self):
-      self.messageRCVD = dict(sorted(self.messageRCVD.items()))
+      self.messagesPrepareReceived = dict(sorted(self.messagesPrepareReceived.items()))
       print("Node: {port: " + str(self.ports) + ", Neighbors: " + str(self.neighbors) + ", CurrentData: " + str(
           self.messagesPrepareReceived) + "}", flush=True)
   def ToStringCommit(self):
-      self.messageRCVD = dict(sorted(self.messageRCVD.items()))
+      self.messagesCommitReceived = dict(sorted(self.messagesCommitReceived.items()))
       print("Node: {port: " + str(self.ports) + ", Neighbors: " + str(self.neighbors) + ", CurrentData: " + str(
           self.messagesCommitReceived) + "}", flush=True)
   def ListToString(self):
@@ -269,32 +281,16 @@ class NodeClass:
       print("Node: {port: " + str(self.ports) + ", Neighbors: " + str(self.neighbors) + ", CurrentData: " + str(
           self.broadcastNbr) + "}", flush=True)
 
-  def checkMessageBroadcast(self):
-    return True
+  def ListToStringRCVD(self):
+      print("Node: {port: " + str(self.ports) + ", Neighbors: " + str(self.neighbors) + ", CurrentData: " + str(
+              self.messageRCVD) + "}", flush=True)
 
 
-  def checkMessagesBroadcast1(self):
-      broadcastMsgNumber = 0
-      for msg in self.messageRCVD:
-          print(self.messageRCVD[msg])
-          if "Broadcast" in self.messageRCVD[msg]:
-              print(f"{self.messageRCVD[msg]} contains Broadcast")
-              broadcastMsgNumber += 1
-
-      if (broadcastMsgNumber>4):
-          self.messagesBroadcastReceived = self.messageRCVD
-          self.messageRCVD.clear()
-          self.isValidBroadcast = True
-      else:
-          self.messagesBroadcastReceived = self.messageRCVD
-          self.messageRCVD.clear()
-          self.isValidBroadcast = False
-
-  def checkMessagesBroadcast(self):
-      while len(self.messagesBroadcastReceived) >= 7:
-
-          if (len(self.messagesBroadcastReceived) >= 7):
+  def checkMessagesBroadcast(self, stop_event,i):
+    while not stop_event:
+          if (len(self.messagesBroadcastReceived) >= 5):
             broadcastMsgNumber = 0
+
             for nbr in list(self.messagesBroadcastReceived):
                 print(self.messagesBroadcastReceived[nbr])
                 if "Broadcast" in self.messagesBroadcastReceived[nbr]:
@@ -302,56 +298,38 @@ class NodeClass:
                     broadcastMsgNumber += 1
 
             if (broadcastMsgNumber>2):
-                #self.messagesBroadcastReceived = self.messageRCVD
-                #self.messageRCVD.clear()
-                self.broadcastMessage("Prepare", self.ports, nbr + 8)
+                print(f"Prepare{self.ports, i + 8} is Broadcasted",flush=True)
+                self.broadcastMessage("Prepare", self.ports, i + 8)
                 self.isValidBroadcast = True
+                stop_event = True  # Signal the event to stop the thread
             else:
-                #self.messagesBroadcastReceived = self.messageRCVD
-                #self.messageRCVD.clear()
                 self.isValidBroadcast = False
-            break
+            # The event is set, so the thread stops here
+    return
 
-  def checkMessagesPrepare(self):
-      while len(self.messagesPrepareReceived) >= 5:
-          #self.messagesPrepareReceived = self.messageRCVD
-          #print("listtttt1" + str(self.messagesPrepareReceived))
-          if (len(self.messagesPrepareReceived) >= 5):
-            prepareMsgNumber = 0
-            for nbr in list(self.messagesPrepareReceived):
-                print(self.messagesPrepareReceived[nbr])
-                if "Prepare" in self.messagesPrepareReceived[nbr]:
-                    print(f"{self.messagesPrepareReceived[nbr]} is in Prepare")
-                    prepareMsgNumber += 1
-            print("listtttt"+str(self.messagesPrepareReceived))
-            if (prepareMsgNumber > 2):
-                #self.messagesPrepareReceived = self.messageRCVD
-                #self.messageRCVD.clear()
-                self.broadcastMessage(f"Commit{nbr}", self.ports, nbr + 8)
-                self.isValidPrepare = True
-            else:
-                #self.messagesPrepareReceived = self.messageRCVD
-                #self.messageRCVD.clear()
-                self.isValidPrepare = False
+  import threading
 
-            break
+  def checkMessagesPrepare(self, stop_event,i):
+      while not stop_event:
+          if len(self.messagesPrepareReceived) >= 5:
+              prepareMsgNumber = 0
 
-  def checkMessagesPrepare1(self):
-      prepareMsgNumber = 0
-      for msg in self.messageRCVD:
-          print(str(self.messageRCVD[msg]))
-          if "Prepare" in self.messageRCVD[msg]:
-              print(f"{msg} is in prepare")
-              prepareMsgNumber += 1
+              for nbr in list(self.messagesPrepareReceived):
+                  print(self.messagesPrepareReceived[nbr])
+                  if "Prepare" in self.messagesPrepareReceived[nbr]:
+                      print(f"{self.messagesPrepareReceived[nbr]} is in Prepare")
+                      prepareMsgNumber += 1
+              print("listtttt" + str(self.messagesPrepareReceived))
+              if prepareMsgNumber > 2:
+                  self.broadcastMessage("Commit", self.ports, i + 8 * 2)
+                  self.isValidPrepare = True
+                  stop_event = True  # Signal the event to stop the thread
+              else:
+                  self.isValidPrepare = False
 
-      if (prepareMsgNumber > 4):
-          self.messagesPrepareReceived = self.messageRCVD
-          self.messageRCVD.clear()
-          self.isValidPrepare = True
+      # The event is set, so the thread stops here
+      return
 
-      else:
-          self.messagesPrepareReceived = self.messageRCVD
-          self.messageRCVD.clear()
-          self.isValidPrepare = False
+
 
 
