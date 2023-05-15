@@ -5,15 +5,27 @@ from collections import namedtuple
 import networkx as nx
 import matplotlib.pyplot as plt
 #dd
-num_nodes = 8
+
 SemaphoreTuple = namedtuple('Semaphore', ['Semaphore', 'Nodes'])
-dropMessagesWhenQIsFull = False
-maxQueueCapacity = 300
-semaphoreMaxValue = 800
+
+
+num_nodes = 8
+dropMessagesWhenQIsFull = True
+maxQueueCapacity = 5
+semaphoreMaxValue = 28
 BitsNumberOfMessagesDropped = 0
 NumberOfMessagesDropped = 0
 TotalNumberOfMessages = 0
 TotalBitsNumberOfMessages = 0
+labeldict = {}
+
+
+G = nx.Graph()
+# pos = nx.spring_layout(G)
+pos = {1: (0, 0), 2: (2, 0), 3: (0, -2), 4: (2, -2), 5: (-3, -5), 6: (1, -5), 7: (3, -5), 8: (7, -5)}
+# pos = nx.spring_layout(G)
+posLabels = {1: (-1, 0.3), 2: (3, 0.3), 3: (-1.3, -1.7), 4: (3.3, -1.7), 5: (-2.7, -4.7), 6: (0.7, -5.3),
+             7: (3.7, -4.7), 8: (6.3, -5.3)}
 class Network:
     nodes: Node
     semaphores = [SemaphoreTuple]
@@ -64,13 +76,24 @@ class Network:
                 else:
                     Network.semaphores.append(SemaphoreTuple(Semaphore(semaphoreValue), [node.ports, neighborPort]))
 
+    def drawNetwork(self):
+            for i,node in enumerate(self.nodes):
+                 labeldict[i+1].pop()
+                 labeldict[i+1].append(node.state["1"])
 
+            nx.draw_networkx_nodes(G, pos)
+            nx.draw_networkx_edges(G, pos)
+            nx.draw_networkx_labels(G, posLabels, labels=labeldict)
+            # nx.draw(G, pos,with_labels=True)
+
+            # Show the graph
+            plt.show()
   # Define the nodes and edges of the network
     nodes = [1, 2, 3, 4, 5, 6, 7, 8]
     edges = [(1, 4), (1, 3), (2, 4), (2, 3), (3, 5),(5,6), (3, 6), (4, 7), (4, 8)]
 
     # Create the graph object
-    G = nx.Graph()
+
 
     # Add nodes to the graph
     G.add_nodes_from(nodes)
@@ -78,25 +101,23 @@ class Network:
     # Add edges to the graph
     G.add_edges_from(edges)
 
-    # pos = nx.spring_layout(G)
-    pos = {1: (0, 0), 2: (2, 0), 3: (0, -2), 4: (2, -2), 5: (-3, -5), 6: (1, -5), 7: (3, -5), 8: (7, -5)}
 
 
 
-    labeldict = {}
-    labeldict[1] = "60345"
-    labeldict[2] = "60348"
-    labeldict[3] = "60347"
-    labeldict[4] = "60346"
-    labeldict[5] = "60349"
-    labeldict[6] = "60350"
-    labeldict[7] = "60351"
-    labeldict[8] = "60352"
+
+    labeldict[1] = ["60345",0]
+    labeldict[2] = ["60348",0]
+    labeldict[3] = ["60347",0]
+    labeldict[4] = ["60346",0]
+    labeldict[5] = ["60349",0]
+    labeldict[6] = ["60350",0]
+    labeldict[7] = ["60351",0]
+    labeldict[8] = ["60352",0]
 
     # Draw the graph
     nx.draw_networkx_nodes(G, pos)
     nx.draw_networkx_edges(G, pos)
-    nx.draw_networkx_labels(G, pos, labels=labeldict)
+    nx.draw_networkx_labels(G, posLabels, labels=labeldict)
     # nx.draw(G, pos,with_labels=True)
 
 
@@ -115,8 +136,6 @@ node8 = Node("127.0.0.1",60352,[60346], maxQueueCapacity)
 network = Network([node1,node2,node3,node4,node5,node6,node7,node8])
 network.StartThreadingOnAll()
 network.initSemaphores(semaphoreMaxValue)
-
-
 
 
 

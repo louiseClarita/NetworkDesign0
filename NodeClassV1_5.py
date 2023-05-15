@@ -25,11 +25,12 @@ class NodeClass:
     self.maxQueueCapacity = maxQueueCapacity
     self.nodeStorageList = []
     self.mutexReadWriteInputNodes = threading.Lock
-    self.state = {}
+    self.state = {"1":" "}
 
 
 
     self.messageRCVD ={}
+    self.messageRCVD = {}
     self.messagesBroadcastReceived = {}
     self.messagesPrepareReceived = {}
     self.messagesCommitReceived = {}
@@ -41,7 +42,8 @@ class NodeClass:
     self.sendThread.daemon = True
     self.sendThread.start()
 
-    self.broadcastNbr = [[[],0] for _ in range(8*3)]
+    self.messagesDropped = []
+    self.broadcastNbr = [[[],0] for _ in range(NetworkConfig.num_nodes * 3)]
 # [[63237,],[],[],[]]
 
 
@@ -86,8 +88,7 @@ class NodeClass:
           socket.send_string("received " + str(self.ports))
           if not (data[1] in self.messageRCVD.keys()):
 
-            NetworkConfig.TotalBitsNumberOfMessages = NetworkConfig.TotalBitsNumberOfMessages + len(data[0])
-            NetworkConfig.TotalNumberOfMessages = NetworkConfig.TotalNumberOfMessages + 1
+
 
             for semaphore in NetworkConfig.network.semaphores:
                     # if semaphore.Nodes == [self.ports, neighborPort] or semaphore.Nodes == [neighborPort,self.ports]:
@@ -95,12 +96,15 @@ class NodeClass:
 
                         semaphore.Semaphore.release()
 
+            NetworkConfig.TotalBitsNumberOfMessages = NetworkConfig.TotalBitsNumberOfMessages + len(data[0])
+            NetworkConfig.TotalNumberOfMessages = NetworkConfig.TotalNumberOfMessages + 1
 
             # this if statement check if the dropMessagesWhenQIsFull = True to drop the msgs
             if NetworkConfig.dropMessagesWhenQIsFull:
 
                 # this if statement check if the Q is full so we drop the packet
                     if not self.messageQueue.full():
+
 
                         if str(data[0]) == "Broadcast":
                             self.messageRCVD[data[1]] = data[0]
@@ -115,9 +119,13 @@ class NodeClass:
                         self.nodeStorageList.append(data)
 
                     else:
+                        self.messagesDropped.append(data[0])
                         NetworkConfig.NumberOfMessagesDropped = NetworkConfig.NumberOfMessagesDropped + 1
                         NetworkConfig.BitsNumberOfMessagesDropped = NetworkConfig.BitsNumberOfMessagesDropped + len(data[0])
             else:
+
+                NetworkConfig.TotalBitsNumberOfMessages = NetworkConfig.TotalBitsNumberOfMessages + len(data[0])
+                NetworkConfig.TotalNumberOfMessages = NetworkConfig.TotalNumberOfMessages + 1
 
                 if str(data[0]) == "Broadcast":
                     self.messageRCVD[data[1]] = data[0]
@@ -136,13 +144,10 @@ class NodeClass:
   def sendMessages(self):
       while True:
           [message,broadcastNbr,currentSendingNode1,sem_id] = self.messageQueue.get()
-
           self.zmqBroadCast(message, currentSendingNode1,broadcastNbr)
-          #self.currentSendingNode = None
+
 
   def broadcastMessage(self,message,currentSendingNode, broadcastNbr):
-          #self.currentSendingNode = currentSendingNode
-
           self.messageQueue.put([message,broadcastNbr,currentSendingNode,0])
 
 
@@ -151,7 +156,7 @@ class NodeClass:
       socket = context.socket(zmq.REP)
       socket.bind("tcp://*:" + str(self.ports))
       while True:
-          #  Wait for next request from client
+
 
           message = socket.recv()
 
@@ -274,62 +279,69 @@ class NodeClass:
               self.messageRCVD) + "}", flush=True)
 
 
-  def checkMessagesBroadcast(self, stop_event,i):
+  def checkMessagesBroadcast(self, stop_event,i,msg):
     while not stop_event:
-          if (len(self.messagesBroadcastReceived) > (NetworkConfig.num_nodes * 2) / 3):
+          if (len(self.messagesBroadcastReceived) >= (NetworkConfig.num_nodes * 2) / 3):
             broadcastMsgNumber = 0
 
             for nbr in list(self.messagesBroadcastReceived):
                 if "Broadcast" in self.messagesBroadcastReceived[nbr]:
                     broadcastMsgNumber += 1
 
-            if (broadcastMsgNumber > (NetworkConfig.num_nodes * 2) / 3):
+            if (broadcastMsgNumber >= (NetworkConfig.num_nodes * 2) / 3):
                 self.state["1"] = "prepare"
-                self.broadcastMessage("Prepare", self.ports, i + 8)
-                self.isValidBroadcast = True
+                print("Sending prepare message from node " +str(self.ports), flush=True)
+
+                self.broadcastMessage(msg, self.ports, i)
+
                 stop_event = True  # Signal the event to stop the thread
             else:
-                self.isValidBroadcast = False
+                print("Pre-prepare messages are less then 2/3 number of nodes in this node: " + str(self.ports), flush=True)
             # The event is set, so the thread stops here
+
+
     return
 
   import threading
 
-  def checkMessagesPrepare(self, stop_event, i):
+  def checkMessagesPrepare(self, stop_event, i,msg):
       while not stop_event:
-          if len(self.messagesPrepareReceived) > (NetworkConfig.num_nodes * 2) / 3:
+          if len(self.messagesPrepareReceived) >= (NetworkConfig.num_nodes * 2) / 3:
               prepareMsgNumber = 0
 
               for nbr in list(self.messagesPrepareReceived):
                   if "Prepare" in self.messagesPrepareReceived[nbr]:
                       prepareMsgNumber += 1
-              if prepareMsgNumber > (NetworkConfig.num_nodes * 2) / 3:
+              if prepareMsgNumber >= (NetworkConfig.num_nodes * 2) / 3:
                   self.state["1"] = "commit"
-                  self.broadcastMessage("Commit", self.ports, i + NetworkConfig.num_nodes * 2)
+                  print("Sending commit message from node "+str(self.ports), flush=True)
+                  self.broadcastMessage(msg, self.ports, i )
                   self.isValidPrepare = True
                   stop_event = True  # Signal the event to stop the thread
               else:
-                  self.isValidPrepare = False
+                  print("Prepare messages are less then 2/3 number of nodes in this node: " + str(self.ports),
+                        flush=True)
+              # The event is set, so the thread stops here
 
-      # The event is set, so the thread stops here
       return
 
 
   def checkMessagesCommit(self, stop_event):
       while not stop_event:
-          if len(self.messagesCommitReceived) > (NetworkConfig.num_nodes * 2) / 3:
+          if len(self.messagesCommitReceived) >= (NetworkConfig.num_nodes * 2) / 3:
               commitMsgNumber = 0
 
               for nbr in list(self.messagesCommitReceived):
                   if "Commit" in self.messagesCommitReceived[nbr]:
                       commitMsgNumber += 1
-              if commitMsgNumber > (NetworkConfig.num_nodes * 2) / 3:
+              if commitMsgNumber >= (NetworkConfig.num_nodes * 2) / 3:
                   #1 = msg id
                   self.state["1"] = "done"
+
                   stop_event = True  # Signal the event to stop the thread
               else:
-                  self.isValidPrepare = False
+                  print("commit messages are less then 2/3 number of nodes in this node: " + str(self.ports),
+                        flush=True)
 
-      # The event is set, so the thread stops here
       return
 
